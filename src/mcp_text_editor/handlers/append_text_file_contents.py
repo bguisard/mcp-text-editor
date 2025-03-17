@@ -4,7 +4,8 @@ import json
 import logging
 import os
 import traceback
-from typing import Any, Dict, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from mcp.types import TextContent, Tool
 
@@ -49,7 +50,7 @@ class AppendTextFileContentsHandler(BaseHandler):
             },
         )
 
-    async def run_tool(self, arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    async def run_tool(self, arguments: dict[str, Any]) -> Sequence[TextContent]:
         """Execute the tool with given arguments."""
         try:
             if "file_path" not in arguments:
@@ -71,9 +72,14 @@ class AppendTextFileContentsHandler(BaseHandler):
 
             # Check file contents and hash before modification
             # Get file information and verify hash
-            content, _, _, current_hash, total_lines, _ = (
-                await self.editor.read_file_contents(file_path, encoding=encoding)
-            )
+            (
+                content,
+                _,
+                _,
+                current_hash,
+                total_lines,
+                _,
+            ) = await self.editor.read_file_contents(file_path, encoding=encoding)
 
             # Verify file hash
             if current_hash != arguments["file_hash"]:

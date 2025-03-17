@@ -1,6 +1,7 @@
 """Base handler for MCP Text Editor."""
 
-from typing import Any, Dict, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from mcp.types import TextContent, Tool
 
@@ -21,6 +22,6 @@ class BaseHandler:
         """Get the tool description."""
         raise NotImplementedError
 
-    async def run_tool(self, arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    async def run_tool(self, arguments: dict[str, Any]) -> Sequence[TextContent]:
         """Execute the tool with given arguments."""
         raise NotImplementedError

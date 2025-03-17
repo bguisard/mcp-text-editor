@@ -51,6 +51,9 @@ lint.select = [
     "I",  # isort
     "C",  # flake8-comprehensions
     "B",  # flake8-bugbear
+    "UP006", # non-pep585-annotation
+    "UP007", # non-pep604-annotation-union
+    "UP035", # deprecated-import
 ]
 lint.ignore = [
     "E501",  # line too long, handled by black

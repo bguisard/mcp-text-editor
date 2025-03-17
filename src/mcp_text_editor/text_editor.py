@@ -3,7 +3,7 @@
 import hashlib
 import logging
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from .models import DeleteTextFileContentsRequest, EditPatch, FileRanges
 from .service import TextEditorService
@@ -22,11 +22,11 @@ class TextEditor:
     def create_error_response(
         self,
         error_message: str,
-        content_hash: Optional[str] = None,
-        file_path: Optional[str] = None,
-        suggestion: Optional[str] = None,
-        hint: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        content_hash: str | None = None,
+        file_path: str | None = None,
+        suggestion: str | None = None,
+        hint: str | None = None,
+    ) -> dict[str, Any]:
         """Create a standardized error response.
 
         Args:
@@ -97,7 +97,7 @@ class TextEditor:
 
     async def _read_file(
         self, file_path: str, encoding: str = "utf-8"
-    ) -> Tuple[List[str], str, int]:
+    ) -> tuple[list[str], str, int]:
         """Read file and return lines, content, and total lines.
 
         Args:
@@ -129,9 +129,9 @@ class TextEditor:
             ) from err
 
     async def read_multiple_ranges(
-        self, ranges: List[Dict[str, Any]], encoding: str = "utf-8"
-    ) -> Dict[str, Dict[str, Any]]:
-        result: Dict[str, Dict[str, Any]] = {}
+        self, ranges: list[dict[str, Any]], encoding: str = "utf-8"
+    ) -> dict[str, dict[str, Any]]:
+        result: dict[str, dict[str, Any]] = {}
 
         for file_range_dict in ranges:
             file_range = FileRanges.model_validate(file_range_dict)
@@ -186,9 +186,9 @@ class TextEditor:
         self,
         file_path: str,
         start: int = 1,
-        end: Optional[int] = None,
+        end: int | None = None,
         encoding: str = "utf-8",
-    ) -> Tuple[str, int, int, str, int, int]:
+    ) -> tuple[str, int, int, str, int, int]:
         lines, file_content, total_lines = await self._read_file(
             file_path, encoding=encoding
         )
@@ -224,9 +224,9 @@ class TextEditor:
         self,
         file_path: str,
         expected_file_hash: str,
-        patches: List[Dict[str, Any]],
+        patches: list[dict[str, Any]],
         encoding: str = "utf-8",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Edit file contents with hash-based conflict detection and multiple patches.
 
@@ -272,7 +272,7 @@ class TextEditor:
                 # Initialize empty state for new file
                 current_file_content = ""
                 current_file_hash = ""
-                lines: List[str] = []
+                lines: list[str] = []
                 encoding = "utf-8"
             else:
                 # Read current file content and verify hash
@@ -342,7 +342,7 @@ class TextEditor:
             for patch in sorted_patches:
                 # Get line numbers (1-based)
                 start: int
-                end: Optional[int]
+                end: int | None
                 if isinstance(patch, EditPatch):
                     start = patch.start
                     end = patch.end
@@ -434,8 +434,8 @@ class TextEditor:
                     }
 
                 # Set suggestions for alternative tools
-                suggestion_text: Optional[str] = None
-                hint_text: Optional[str] = None
+                suggestion_text: str | None = None
+                hint_text: str | None = None
                 if not os.path.exists(file_path) or not current_file_content:
                     suggestion_text = "append"
                     hint_text = "For new or empty files, please consider using append_text_file_contents instead"
@@ -503,10 +503,10 @@ class TextEditor:
         file_path: str,
         file_hash: str,
         contents: str,
-        after: Optional[int] = None,
-        before: Optional[int] = None,
+        after: int | None = None,
+        before: int | None = None,
         encoding: str = "utf-8",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Insert text content before or after a specific line in a file.
 
         Args:
@@ -611,7 +611,7 @@ class TextEditor:
     async def delete_text_file_contents(
         self,
         request: DeleteTextFileContentsRequest,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Delete specified ranges from a text file with conflict detection.
 
         Args:

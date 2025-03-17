@@ -3,7 +3,7 @@
 import logging
 import traceback
 from collections.abc import Sequence
-from typing import Any, List
+from typing import Any
 
 from mcp.server import Server
 from mcp.types import TextContent, Tool
@@ -34,7 +34,7 @@ insert_file_handler = InsertTextFileContentsHandler()
 
 
 @app.list_tools()
-async def list_tools() -> List[Tool]:
+async def list_tools() -> list[Tool]:
     """List available tools."""
     return [
         get_contents_handler.get_tool_description(),

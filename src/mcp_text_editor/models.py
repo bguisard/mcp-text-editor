@@ -1,7 +1,5 @@
 """Data models for the MCP Text Editor Server."""
 
-from typing import Dict, List, Optional
-
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -10,7 +8,7 @@ class GetTextFileContentsRequest(BaseModel):
 
     file_path: str = Field(..., description="Path to the text file")
     start: int = Field(1, description="Starting line number (1-based)")
-    end: Optional[int] = Field(None, description="Ending line number (inclusive)")
+    end: int | None = Field(None, description="Ending line number (inclusive)")
 
 
 class GetTextFileContentsResponse(BaseModel):
@@ -26,9 +24,9 @@ class EditPatch(BaseModel):
     """Model for a single edit patch operation."""
 
     start: int = Field(1, description="Starting line for edit")
-    end: Optional[int] = Field(None, description="Ending line for edit")
+    end: int | None = Field(None, description="Ending line for edit")
     contents: str = Field(..., description="New content to insert")
-    range_hash: Optional[str] = Field(
+    range_hash: str | None = Field(
         None,  # None for new patches, must be explicitly set
         description="Hash of content being replaced. Empty string for insertions.",
     )
@@ -53,15 +51,15 @@ class EditFileOperation(BaseModel):
 
     path: str = Field(..., description="Path to the file")
     hash: str = Field(..., description="Hash of original contents")
-    patches: List[EditPatch] = Field(..., description="Edit operations to apply")
+    patches: list[EditPatch] = Field(..., description="Edit operations to apply")
 
 
 class EditResult(BaseModel):
     """Model for edit operation result."""
 
     result: str = Field(..., description="Operation result (ok/error)")
-    reason: Optional[str] = Field(None, description="Error message if applicable")
-    hash: Optional[str] = Field(
+    reason: str | None = Field(None, description="Error message if applicable")
+    hash: str | None = Field(
         None, description="Current content hash (None for missing files)"
     )
 
@@ -72,7 +70,7 @@ class EditResult(BaseModel):
             object.__setattr__(self, "hash", None)
         return self
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert EditResult to a dictionary."""
         result = {"result": self.result}
         if self.reason is not None:
@@ -103,17 +101,17 @@ class EditTextFileContentsRequest(BaseModel):
     }
     """
 
-    files: List[EditFileOperation] = Field(..., description="List of file operations")
+    files: list[EditFileOperation] = Field(..., description="List of file operations")
 
 
 class FileRange(BaseModel):
     """Represents a line range in a file."""
 
     start: int = Field(..., description="Starting line number (1-based)")
-    end: Optional[int] = Field(
+    end: int | None = Field(
         None, description="Ending line number (null for end of file)"
     )
-    range_hash: Optional[str] = Field(
+    range_hash: str | None = Field(
         None, description="Hash of the content to be deleted"
     )
 
@@ -122,7 +120,7 @@ class FileRanges(BaseModel):
     """Represents a file and its line ranges."""
 
     file_path: str = Field(..., description="Path to the text file")
-    ranges: List[FileRange] = Field(
+    ranges: list[FileRange] = Field(
         ..., description="List of line ranges to read from the file"
     )
 
@@ -148,13 +146,13 @@ class InsertTextFileContentsRequest(BaseModel):
 
     path: str = Field(..., description="Path to the text file")
     file_hash: str = Field(..., description="Hash of original contents")
-    after: Optional[int] = Field(
+    after: int | None = Field(
         None, description="Line number after which to insert content"
     )
-    before: Optional[int] = Field(
+    before: int | None = Field(
         None, description="Line number before which to insert content"
     )
-    encoding: Optional[str] = Field(
+    encoding: str | None = Field(
         "utf-8", description="Text encoding (default: 'utf-8')"
     )
     contents: str = Field(..., description="Content to insert")
@@ -169,7 +167,7 @@ class InsertTextFileContentsRequest(BaseModel):
         return self
 
     @field_validator("after", "before")
-    def validate_line_number(cls, v) -> Optional[int]:
+    def validate_line_number(cls, v) -> int | None:
         """Validate that line numbers are positive."""
         if v is not None and v < 1:
             raise ValueError("Line numbers must be positive")
@@ -194,8 +192,8 @@ class DeleteTextFileContentsRequest(BaseModel):
 
     file_path: str = Field(..., description="Path to the text file")
     file_hash: str = Field(..., description="Hash of original contents")
-    ranges: List[FileRange] = Field(..., description="List of ranges to delete")
-    encoding: Optional[str] = Field(
+    ranges: list[FileRange] = Field(..., description="List of ranges to delete")
+    encoding: str | None = Field(
         "utf-8", description="Text encoding (default: 'utf-8')"
     )
 
@@ -219,7 +217,7 @@ class PatchTextFileContentsRequest(BaseModel):
 
     file_path: str = Field(..., description="Path to the text file")
     file_hash: str = Field(..., description="Hash of original contents")
-    patches: List[EditPatch] = Field(..., description="List of patches to apply")
-    encoding: Optional[str] = Field(
+    patches: list[EditPatch] = Field(..., description="List of patches to apply")
+    encoding: str | None = Field(
         "utf-8", description="Text encoding (default: 'utf-8')"
     )

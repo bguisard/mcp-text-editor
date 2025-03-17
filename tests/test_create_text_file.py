@@ -1,7 +1,8 @@
 """Test cases for create_text_file handler."""
 
 import os
-from typing import Any, Dict, Generator
+from collections.abc import Generator
+from typing import Any
 
 import pytest
 
@@ -31,7 +32,7 @@ async def test_create_text_file_success(test_dir: str, cleanup_files: None) -> N
     content = "Hello, World!\n"
 
     # Create file using handler
-    arguments: Dict[str, Any] = {
+    arguments: dict[str, Any] = {
         "file_path": test_file,
         "contents": content,
     }
@@ -58,7 +59,7 @@ async def test_create_text_file_exists(test_dir: str, cleanup_files: None) -> No
         f.write("Existing content\n")
 
     # Try to create file using handler
-    arguments: Dict[str, Any] = {
+    arguments: dict[str, Any] = {
         "file_path": test_file,
         "contents": "New content\n",
     }
@@ -74,7 +75,7 @@ async def test_create_text_file_relative_path(
 ) -> None:
     """Test attempting to create a file with a relative path."""
     # Try to create file using relative path
-    arguments: Dict[str, Any] = {
+    arguments: dict[str, Any] = {
         "file_path": "relative_path.txt",
         "contents": "Some content\n",
     }
@@ -108,7 +109,7 @@ async def test_create_text_file_custom_encoding(
     content = "こんにちは\n"  # Japanese text
 
     # Create file using handler with specified encoding
-    arguments: Dict[str, Any] = {
+    arguments: dict[str, Any] = {
         "file_path": test_file,
         "contents": content,
         "encoding": "utf-8",

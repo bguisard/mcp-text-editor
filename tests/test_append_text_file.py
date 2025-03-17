@@ -1,7 +1,8 @@
 """Test cases for append_text_file_contents handler."""
 
 import os
-from typing import Any, Dict, Generator
+from collections.abc import Generator
+from typing import Any
 
 import pytest
 
@@ -41,7 +42,7 @@ async def test_append_text_file_success(test_dir: str, cleanup_files: None) -> N
     _, _, _, file_hash, _, _ = await editor.read_file_contents(test_file)
 
     # Append content using handler
-    arguments: Dict[str, Any] = {
+    arguments: dict[str, Any] = {
         "file_path": test_file,
         "contents": append_content,
         "file_hash": file_hash,
@@ -65,7 +66,7 @@ async def test_append_text_file_not_exists(test_dir: str, cleanup_files: None) -
     test_file = os.path.join(test_dir, "nonexistent.txt")
 
     # Try to append to non-existent file
-    arguments: Dict[str, Any] = {
+    arguments: dict[str, Any] = {
         "file_path": test_file,
         "contents": "Some content\n",
         "file_hash": "dummy_hash",
@@ -90,7 +91,7 @@ async def test_append_text_file_hash_mismatch(
         f.write(initial_content)
 
     # Try to append with incorrect hash
-    arguments: Dict[str, Any] = {
+    arguments: dict[str, Any] = {
         "file_path": test_file,
         "contents": "New content\n",
         "file_hash": "incorrect_hash",
@@ -107,7 +108,7 @@ async def test_append_text_file_relative_path(
     test_dir: str, cleanup_files: None
 ) -> None:
     """Test attempting to append using a relative path."""
-    arguments: Dict[str, Any] = {
+    arguments: dict[str, Any] = {
         "file_path": "relative_path.txt",
         "contents": "Some content\n",
         "file_hash": "dummy_hash",
@@ -162,7 +163,7 @@ async def test_append_text_file_custom_encoding(
     )
 
     # Append content using handler with specified encoding
-    arguments: Dict[str, Any] = {
+    arguments: dict[str, Any] = {
         "file_path": test_file,
         "contents": append_content,
         "file_hash": file_hash,

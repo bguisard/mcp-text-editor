@@ -4,7 +4,8 @@ import json
 import logging
 import os
 import traceback
-from typing import Any, Dict, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from mcp.types import TextContent, Tool
 
@@ -57,7 +58,7 @@ class InsertTextFileContentsHandler(BaseHandler):
             },
         )
 
-    async def run_tool(self, arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    async def run_tool(self, arguments: dict[str, Any]) -> Sequence[TextContent]:
         """Execute the tool with given arguments."""
         try:
             if "file_path" not in arguments:

@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-from typing import List
 
 import pytest
 from mcp.server import stdio
@@ -27,7 +26,7 @@ from mcp_text_editor.server import (
 @pytest.mark.asyncio
 async def test_list_tools():
     """Test tool listing."""
-    tools: List[Tool] = await list_tools()
+    tools: list[Tool] = await list_tools()
     assert len(tools) == 6
 
     # Verify GetTextFileContents tool

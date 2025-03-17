@@ -1,7 +1,6 @@
 """Core service logic for the MCP Text Editor Server."""
 
 import hashlib
-from typing import Dict, List, Optional, Tuple
 
 from .models import (
     DeleteTextFileContentsRequest,
@@ -22,8 +21,8 @@ class TextEditorService:
 
     @staticmethod
     def read_file_contents(
-        file_path: str, start: int = 1, end: Optional[int] = None
-    ) -> Tuple[str, int, int]:
+        file_path: str, start: int = 1, end: int | None = None
+    ) -> tuple[str, int, int]:
         """Read file contents within specified line range."""
         with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -38,7 +37,7 @@ class TextEditorService:
         return content, start + 1, end
 
     @staticmethod
-    def validate_patches(patches: List[EditPatch], total_lines: int) -> bool:
+    def validate_patches(patches: list[EditPatch], total_lines: int) -> bool:
         """Validate patches for overlaps and bounds."""
         # Sort patches by start
         sorted_patches = sorted(patches, key=lambda x: x.start)
@@ -56,7 +55,7 @@ class TextEditorService:
 
     def edit_file_contents(
         self, file_path: str, operation: EditFileOperation
-    ) -> Dict[str, EditResult]:
+    ) -> dict[str, EditResult]:
         """Edit file contents with conflict detection."""
         current_hash = None
         try:
@@ -129,7 +128,7 @@ class TextEditorService:
     def delete_text_file_contents(
         self,
         request: DeleteTextFileContentsRequest,
-    ) -> Dict[str, EditResult]:
+    ) -> dict[str, EditResult]:
         """Delete specified ranges from a text file with conflict detection."""
         current_hash = None
         try:
@@ -219,7 +218,7 @@ class TextEditorService:
             }
 
     @staticmethod
-    def validate_ranges(ranges: List[FileRange], total_lines: int) -> bool:
+    def validate_ranges(ranges: list[FileRange], total_lines: int) -> bool:
         """Validate ranges for overlaps and bounds."""
         # Sort ranges by start line
         sorted_ranges = sorted(ranges, key=lambda x: x.start)
