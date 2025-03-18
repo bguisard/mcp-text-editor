@@ -10,17 +10,14 @@ from mcp.types import TextContent
 from pytest_mock import MockerFixture
 
 from mcp_text_editor.handlers import GetTextFileContentsHandler
-from mcp_text_editor.server import TextEditorServer, get_server, main
+from mcp_text_editor.server import TextEditorServer, main, new_server
 from mcp_text_editor.text_editor import TextEditor
 
 
 @pytest.fixture
 def server():
     """Create a TextEditorServer instance for testing."""
-    server = TextEditorServer()
-    server.app.list_tools()(server.list_tools)
-    server.app.call_tool()(server.call_tool)
-    return server
+    return new_server()
 
 
 @pytest.mark.asyncio
@@ -177,7 +174,7 @@ async def test_main_stdio_server_error(mocker: MockerFixture):
     # Mock the get_server function to return a mock server
     mock_server = mocker.MagicMock()
     mock_server.run.side_effect = Exception("Stdio server error")
-    mocker.patch("mcp_text_editor.server.get_server", return_value=mock_server)
+    mocker.patch("mcp_text_editor.server.new_server", return_value=mock_server)
 
     with pytest.raises(Exception) as exc_info:
         await main()
@@ -190,7 +187,7 @@ async def test_main_run_error(mocker: MockerFixture):
     # Mock the get_server function to return a mock server
     mock_server = mocker.MagicMock()
     mock_server.run.side_effect = Exception("Server run error")
-    mocker.patch("mcp_text_editor.server.get_server", return_value=mock_server)
+    mocker.patch("mcp_text_editor.server.new_server", return_value=mock_server)
 
     with pytest.raises(Exception) as exc_info:
         await main()
@@ -297,16 +294,6 @@ async def test_server_initialization_with_paths(tmp_path):
     # Verify that handlers have the same editor
     handler = server.handlers["get_text_file_contents"]
     assert handler.editor is server.editor
-
-
-@pytest.mark.asyncio
-async def test_server_singleton():
-    """Test that get_server returns a singleton instance."""
-    server1 = get_server()
-    server2 = get_server()
-
-    # Verify that both calls return the same instance
-    assert server1 is server2
 
 
 @pytest.mark.asyncio

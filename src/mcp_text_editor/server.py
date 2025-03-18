@@ -98,23 +98,26 @@ class TextEditorServer:
             raise
 
 
-# Module-level server instance
-_server_instance: TextEditorServer | None = None
+def new_server(allowed_paths: list[str] | None = None) -> TextEditorServer:
+    """Create a new server instance with the given configuration.
 
+    Args:
+        allowed_paths: List of directory paths that are allowed to be accessed.
+                      If None or empty list, all paths are allowed.
 
-def get_server() -> TextEditorServer:
-    """Get the global server instance, initializing it if necessary."""
-    global _server_instance
-    if _server_instance is None:
-        # Parse command line arguments as allowed paths
-        allowed_paths = sys.argv[1:] if len(sys.argv) > 1 else None
-        _server_instance = TextEditorServer(allowed_paths=allowed_paths)
-    return _server_instance
+    Returns:
+        A new TextEditorServer instance.
+    """
+    return TextEditorServer(allowed_paths=allowed_paths)
 
 
 async def main() -> None:
     """Main entry point for the MCP text editor server."""
     logger.info(f"Starting MCP text editor server v{__version__}")
 
-    server = get_server()
+    # Parse command line arguments as allowed paths
+    allowed_paths = sys.argv[1:] if len(sys.argv) > 1 else None
+
+    # Create a new server instance
+    server = new_server(allowed_paths=allowed_paths)
     await server.run()
