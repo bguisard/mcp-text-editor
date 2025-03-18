@@ -118,11 +118,3 @@ async def main() -> None:
 
     server = get_server()
     await server.run()
-
-
-# For backwards compatibility with functions that expect these handlers
-# These will be removed in a future version
-@property
-def app() -> Server:
-    """Get the server app."""
-    return get_server().app
