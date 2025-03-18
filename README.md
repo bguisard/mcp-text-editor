@@ -53,34 +53,10 @@ MCP Text Editor Server is designed to facilitate safe and efficient line-based t
 - Support for multiple file operations
 - Proper handling of concurrent edits with hash-based validation
 - Memory-efficient processing of large files
+- Path restriction for enhanced security
+- Create, append, insert, delete, and patch operations
 
-## Requirements
 
-- Python 3.11 or higher
-- POSIX-compliant operating system (Linux, macOS, etc.) or Windows
-- Sufficient disk space for text file operations
-- File system permissions for read/write operations
-
-1. Install Python 3.11+
-
-```bash
-pyenv install 3.11.6
-pyenv local 3.11.6
-```
-
-2. Install uv (recommended) or pip
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-3. Create virtual environment and install dependencies
-
-```bash
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -e ".[dev]"
-```
 
 ## Requirements
 
@@ -131,8 +107,10 @@ uv pip install -e ".[dev]"
 
 Start the server:
 
+You can optionally specify allowed paths as command-line arguments to restrict file operations to specific directories.
+
 ```bash
-python -m mcp_text_editor
+python -m mcp_text_editor [allowed_path1 allowed_path2 ...]
 ```
 
 ### MCP Tools
@@ -143,18 +121,8 @@ The server provides several tools for text file manipulation:
 
 Get the contents of one or more text files with line range specification.
 
-**Single Range Request:**
 
-```json
-{
-  "file_path": "path/to/file.txt",
-  "line_start": 1,
-  "line_end": 10,
-  "encoding": "utf-8"  // Optional, defaults to utf-8
-}
-```
-
-**Multiple Ranges Request:**
+**Request Format:**
 
 ```json
 {
@@ -179,24 +147,11 @@ Get the contents of one or more text files with line range specification.
 
 Parameters:
 - `file_path`: Path to the text file
-- `line_start`/`start`: Line number to start from (1-based)
-- `line_end`/`end`: Line number to end at (inclusive, null for end of file)
+- `start`: Line number to start from (1-based)
+- `end`: Line number to end at (inclusive, null for end of file)
 - `encoding`: File encoding (default: "utf-8"). Specify the encoding of the text file (e.g., "shift_jis", "latin1")
 
-**Single Range Response:**
-
-```json
-{
-  "contents": "File contents",
-  "line_start": 1,
-  "line_end": 10,
-  "hash": "sha256-hash-of-contents",
-  "file_lines": 50,
-  "file_size": 1024
-}
-```
-
-**Multiple Ranges Response:**
+**Response:**
 
 ```json
 {
@@ -231,6 +186,125 @@ Parameters:
 }
 ```
 
+#### create_text_file
+
+Create a new text file with specified content. Will fail if the file already exists.
+
+**Request Format:**
+
+```json
+{
+  "file_path": "path/to/new_file.txt",
+  "contents": "Content for the new file\n",
+  "encoding": "utf-8"  // Optional, defaults to utf-8
+}
+```
+
+**Response:**
+
+```json
+{
+  "result": "ok",
+  "hash": "sha256-hash-of-contents"
+}
+```
+
+#### append_text_file_contents
+
+Append content to an existing text file.
+
+**Request Format:**
+
+```json
+{
+  "file_path": "path/to/file.txt",
+  "file_hash": "sha256-hash-from-get-contents",
+  "contents": "Content to append\n",
+  "encoding": "utf-8"  // Optional, defaults to utf-8
+}
+```
+
+**Response:**
+
+```json
+{
+  "result": "ok",
+  "hash": "sha256-hash-of-new-contents"
+}
+```
+
+#### insert_text_file_contents
+
+Insert content before or after a specific line in a text file.
+
+**Request Format:**
+
+```json
+{
+  "file_path": "path/to/file.txt",
+  "file_hash": "sha256-hash-from-get-contents",
+  "contents": "Content to insert\n",
+  "before": 5,  // Line number before which to insert (mutually exclusive with "after")
+  "encoding": "utf-8"  // Optional, defaults to utf-8
+}
+```
+
+or
+
+```json
+{
+  "file_path": "path/to/file.txt",
+  "file_hash": "sha256-hash-from-get-contents",
+  "contents": "Content to insert\n",
+  "after": 10,  // Line number after which to insert (mutually exclusive with "before")
+  "encoding": "utf-8"  // Optional, defaults to utf-8
+}
+```
+
+**Response:**
+
+```json
+{
+  "result": "ok",
+  "hash": "sha256-hash-of-new-contents"
+}
+```
+
+#### delete_text_file_contents
+
+Delete specified line ranges from a text file.
+
+**Request Format:**
+
+```json
+{
+  "file_path": "path/to/file.txt",
+  "file_hash": "sha256-hash-from-get-contents",
+  "ranges": [
+    {
+      "start": 5,
+      "end": 10,
+      "range_hash": "sha256-hash-of-content-being-deleted"
+    },
+    {
+      "start": 15,
+      "end": 20,
+      "range_hash": "sha256-hash-of-content-being-deleted"
+    }
+  ],
+  "encoding": "utf-8"  // Optional, defaults to utf-8
+}
+```
+
+**Response:**
+
+```json
+{
+  "result": "ok",
+  "hash": "sha256-hash-of-new-contents"
+}
+```
+
 #### patch_text_file_contents
 
 Apply patches to text files with robust error handling and conflict detection. Supports editing multiple files in a single operation.
@@ -239,25 +313,21 @@ Apply patches to text files with robust error handling and conflict detection. S
 
 ```json
 {
-  "files": [
+  "file_path": "file1.txt",
+  "file_hash": "sha256-hash-from-get-contents",
+  "encoding": "utf-8",  // Optional, defaults to utf-8
+  "patches": [
     {
-      "file_path": "file1.txt",
-      "hash": "sha256-hash-from-get-contents",
-      "encoding": "utf-8",  // Optional, defaults to utf-8
-      "patches": [
-        {
-          "start": 5,
-          "end": 8,
-          "range_hash": "sha256-hash-of-content-being-replaced",
-          "contents": "New content for lines 5-8\n"
-        },
-        {
-          "start": 15,
-          "end": null,  // null means end of file
-          "range_hash": "sha256-hash-of-content-being-replaced",
-          "contents": "Content to append\n"
-        }
-      ]
+      "start": 5,
+      "end": 8,
+      "range_hash": "sha256-hash-of-content-being-replaced",
+      "contents": "New content for lines 5-8\n"
+    },
+    {
+      "start": 15,
+      "end": null,  // null means end of file
+      "range_hash": "sha256-hash-of-content-being-replaced",
+      "contents": "Content to append\n"
     }
   ]
 }
@@ -275,10 +345,8 @@ Important Notes:
 
 ```json
 {
-  "file1.txt": {
-    "result": "ok",
-    "hash": "sha256-hash-of-new-contents"
-  }
+  "result": "ok",
+  "hash": "sha256-hash-of-new-contents"
 }
 ```
 
@@ -286,23 +354,11 @@ Important Notes:
 
 ```json
 {
-  "file1.txt": {
-    "result": "error",
-    "reason": "Content hash mismatch",
-    "suggestion": "get",  // Suggests using get_text_file_contents
-    "hint": "Please run get_text_file_contents first to get current content and hashes"
-  }
+  "result": "error",
+  "reason": "Content hash mismatch",
+  "suggestion": "get",  // Suggests using get_text_file_contents
+  "hint": "Please run get_text_file_contents first to get current content and hashes"
 }
-```
-
-    "result": "error",
-    "reason": "Content hash mismatch - file was modified",
-    "hash": "current-hash",
-    "content": "Current file content"
-
-  }
-}
-
 ```
 
 ### Common Usage Pattern
@@ -323,19 +379,16 @@ contents = await get_text_file_contents({
 2. Edit file content:
 
 ```python
-result = await edit_text_file_contents({
-    "files": [
+result = await patch_text_file_contents({
+    "file_path": "file.txt",
+    "file_hash": contents["file.txt"]["file_hash"],
+    "encoding": "utf-8",  # Optional, defaults to "utf-8"
+    "patches": [
         {
-            "path": "file.txt",
-            "hash": contents["file.txt"][0]["hash"],
-            "encoding": "utf-8",  # Optional, defaults to "utf-8"
-            "patches": [
-                {
-                    "line_start": 5,
-                    "line_end": 8,
-                    "contents": "New content\n"
-                }
-            ]
+            "start": 5,
+            "end": 8,
+            "range_hash": contents["file.txt"]["ranges"][0]["range_hash"],
+            "contents": "New content\n"
         }
     ]
 })
@@ -344,8 +397,8 @@ result = await edit_text_file_contents({
 3. Handle conflicts:
 
 ```python
-if result["file.txt"]["result"] == "error":
-    if "hash mismatch" in result["file.txt"]["reason"]:
+if result["result"] == "error":
+    if "hash mismatch" in result["reason"]:
         # File was modified by another process
         # Get new content and retry
         pass
@@ -365,6 +418,7 @@ The server handles various error cases:
 ## Security Considerations
 
 - File Path Validation: The server validates all file paths to prevent directory traversal attacks
+- Path Restrictions: Can be restricted to specific directories via command-line arguments
 - Access Control: Proper file system permissions should be set to restrict access to authorized directories
 - Hash Validation: All file modifications are validated using SHA-256 hashes to prevent race conditions
 - Input Sanitization: All user inputs are properly sanitized and validated
@@ -438,6 +492,7 @@ mcp-text-editor/
 ├── mcp_text_editor/
 │   ├── __init__.py
 │   ├── __main__.py      # Entry point
+│   ├── handlers/        # Tool-specific handlers
 │   ├── models.py        # Data models
 │   ├── server.py        # MCP Server implementation
 │   ├── service.py       # Core service logic
