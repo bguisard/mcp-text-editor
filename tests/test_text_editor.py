@@ -254,28 +254,6 @@ async def test_file_hash_mismatch(editor, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_path_traversal_prevention(editor, tmp_path):
-    """Test prevention of path traversal attacks."""
-    test_file = tmp_path / "test.txt"
-    test_file.write_text("Some content\n")
-    unsafe_path = str(test_file) + "/.."  # Try to traverse up
-
-    # Test read operation
-    with pytest.raises(ValueError) as excinfo:
-        await editor.read_file_contents(unsafe_path)
-    assert "Path traversal not allowed" in str(excinfo.value)
-
-    # Test write operation
-    with pytest.raises(ValueError) as excinfo:
-        await editor.edit_file_contents(
-            unsafe_path,
-            "",
-            [{"start": 1, "contents": "malicious content\n", "range_hash": None}],
-        )
-    assert "Path traversal not allowed" in str(excinfo.value)
-
-
-@pytest.mark.asyncio
 async def test_overlapping_patches(editor, tmp_path):
     """Test handling of overlapping patches."""
     # Create a test file

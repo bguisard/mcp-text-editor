@@ -14,10 +14,32 @@ logger = logging.getLogger(__name__)
 class TextEditor:
     """Handles text file operations with security checks and conflict detection."""
 
-    def __init__(self):
-        """Initialize TextEditor."""
+    def __init__(self, allowed_paths: list[str] | None = None):
+        """Initialize TextEditor.
+
+        Args:
+            allowed_paths: Optional list of root paths that are allowed to be accessed.
+                           If None or empty, all paths are allowed.
+        """
+        self._allowed_paths: set[str] = set()
+
+        # Normalize allowed paths if provided
+        if allowed_paths:
+            for path in allowed_paths:
+                if os.path.exists(path):
+                    self._allowed_paths.add(os.path.realpath(path))
+                else:
+                    logger.warning(f"Allowed path does not exist: {path}")
+
         self._validate_environment()
         self.service = TextEditorService()
+
+        if self._allowed_paths:
+            logger.info(
+                f"Running in restricted mode with allowed paths: {self._allowed_paths}"
+            )
+        else:
+            logger.info("Running in unrestricted mode - all paths are accessible")
 
     def create_error_response(
         self,
@@ -75,12 +97,21 @@ class TextEditor:
         Raises:
             ValueError: If path is not allowed or contains dangerous patterns
         """
-        # Convert path to string for checking
-        path_str = str(file_path)
+        # If no allowed paths are defined, all paths are allowed
+        if not self._allowed_paths:
+            return
 
-        # Check for dangerous patterns
-        if ".." in path_str:
-            raise ValueError("Path traversal not allowed")
+        real_path = os.path.realpath(file_path)
+
+        if not any(
+            real_path.startswith(allowed_path) for allowed_path in self._allowed_paths
+        ):
+            # Don't expose full paths in error messages
+            requested_dir = os.path.dirname(file_path)
+            raise ValueError(
+                f"Access denied: The path '{os.path.basename(file_path)}' in directory "
+                f"'{os.path.basename(requested_dir)}' is not in an allowed location."
+            )
 
     @staticmethod
     def calculate_hash(content: str) -> str:

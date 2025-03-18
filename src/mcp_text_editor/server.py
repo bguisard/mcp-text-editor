@@ -1,6 +1,7 @@
 """MCP Text Editor Server implementation."""
 
 import logging
+import sys
 import traceback
 from collections.abc import Sequence
 from typing import Any
@@ -16,75 +17,112 @@ from .handlers import (
     InsertTextFileContentsHandler,
     PatchTextFileContentsHandler,
 )
+from .text_editor import TextEditor
 from .version import __version__
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp-text-editor")
 
-app = Server("mcp-text-editor")
 
-# Initialize tool handlers
-get_contents_handler = GetTextFileContentsHandler()
-patch_file_handler = PatchTextFileContentsHandler()
-create_file_handler = CreateTextFileHandler()
-append_file_handler = AppendTextFileContentsHandler()
-delete_contents_handler = DeleteTextFileContentsHandler()
-insert_file_handler = InsertTextFileContentsHandler()
+class TextEditorServer:
+    """Server class for the MCP Text Editor."""
 
+    def __init__(self, allowed_paths: list[str] | None = None):
+        """Initialize the server with optional path restrictions.
 
-@app.list_tools()
-async def list_tools() -> list[Tool]:
-    """List available tools."""
-    return [
-        get_contents_handler.get_tool_description(),
-        create_file_handler.get_tool_description(),
-        append_file_handler.get_tool_description(),
-        delete_contents_handler.get_tool_description(),
-        insert_file_handler.get_tool_description(),
-        patch_file_handler.get_tool_description(),
-    ]
+        Args:
+            allowed_paths: List of directory paths that are allowed to be accessed.
+                        If None or empty list, all paths are allowed.
+        """
+        self.app = Server("mcp-text-editor")
+        self.editor = TextEditor(allowed_paths=allowed_paths)
 
-
-@app.call_tool()
-async def call_tool(name: str, arguments: Any) -> Sequence[TextContent]:
-    """Handle tool calls."""
-    logger.info(f"Calling tool: {name}")
-    try:
-        if name == get_contents_handler.name:
-            return await get_contents_handler.run_tool(arguments)
-        elif name == create_file_handler.name:
-            return await create_file_handler.run_tool(arguments)
-        elif name == append_file_handler.name:
-            return await append_file_handler.run_tool(arguments)
-        elif name == delete_contents_handler.name:
-            return await delete_contents_handler.run_tool(arguments)
-        elif name == insert_file_handler.name:
-            return await insert_file_handler.run_tool(arguments)
-        elif name == patch_file_handler.name:
-            return await patch_file_handler.run_tool(arguments)
+        if allowed_paths:
+            logger.info(f"Editor initialized with path restrictions: {allowed_paths}")
         else:
-            raise ValueError(f"Unknown tool: {name}")
-    except ValueError:
-        logger.error(traceback.format_exc())
-        raise
-    except Exception as e:
-        logger.error(traceback.format_exc())
-        raise RuntimeError(f"Error executing command: {str(e)}") from e
+            logger.info(
+                "Editor initialized without path restrictions - all paths accessible"
+            )
+
+        self.handlers = {
+            "get_text_file_contents": GetTextFileContentsHandler(self.editor),
+            "create_text_file": CreateTextFileHandler(self.editor),
+            "append_text_file_contents": AppendTextFileContentsHandler(self.editor),
+            "delete_text_file_contents": DeleteTextFileContentsHandler(self.editor),
+            "insert_text_file_contents": InsertTextFileContentsHandler(self.editor),
+            "patch_text_file_contents": PatchTextFileContentsHandler(self.editor),
+        }
+
+        self._register_handlers()
+
+    def _register_handlers(self):
+        """Post-initialization setup."""
+        self.app.list_tools()(self.list_tools)
+        self.app.call_tool()(self.call_tool)
+
+    async def call_tool(self, name: str, arguments: Any) -> Sequence[TextContent]:
+        """Handle tool calls."""
+        logger.info(f"Calling tool: {name}")
+
+        try:
+            handler = self.handlers[name]
+            return await handler.run_tool(arguments)
+        except ValueError:
+            logger.error(traceback.format_exc())
+            raise
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            raise RuntimeError(f"Error executing command: {str(e)}") from e
+
+    async def list_tools(self) -> list[Tool]:
+        """List available tools."""
+        tool_list = []
+        for handler in self.handlers.values():
+            tool_list.append(handler.get_tool_description())
+        return tool_list
+
+    async def run(self) -> None:
+        """Run the server."""
+        try:
+            from mcp.server.stdio import stdio_server
+
+            async with stdio_server() as (read_stream, write_stream):
+                await self.app.run(
+                    read_stream,
+                    write_stream,
+                    self.app.create_initialization_options(),
+                )
+        except Exception as e:
+            logger.error(f"Server error: {str(e)}")
+            raise
+
+
+# Module-level server instance
+_server_instance: TextEditorServer | None = None
+
+
+def get_server() -> TextEditorServer:
+    """Get the global server instance, initializing it if necessary."""
+    global _server_instance
+    if _server_instance is None:
+        # Parse command line arguments as allowed paths
+        allowed_paths = sys.argv[1:] if len(sys.argv) > 1 else None
+        _server_instance = TextEditorServer(allowed_paths=allowed_paths)
+    return _server_instance
 
 
 async def main() -> None:
     """Main entry point for the MCP text editor server."""
     logger.info(f"Starting MCP text editor server v{__version__}")
-    try:
-        from mcp.server.stdio import stdio_server
 
-        async with stdio_server() as (read_stream, write_stream):
-            await app.run(
-                read_stream,
-                write_stream,
-                app.create_initialization_options(),
-            )
-    except Exception as e:
-        logger.error(f"Server error: {str(e)}")
-        raise
+    server = get_server()
+    await server.run()
+
+
+# For backwards compatibility with functions that expect these handlers
+# These will be removed in a future version
+@property
+def app() -> Server:
+    """Get the server app."""
+    return get_server().app
